@@ -2,7 +2,6 @@ from imutils.video import VideoStream
 from imutils.video import FPS
 from imutils.object_detection import non_max_suppression
 import numpy as np
-import argparse
 import imutils
 import time
 import cv2
@@ -10,10 +9,6 @@ try:
     from tflite_runtime.interpreter import Interpreter
 except:
     from tensorflow.lite.python.interpreter import Interpreter
-
-fpsstr = ""
-framecount = 0
-time1 = 0
 
 def rotated_Rectangle(img, rotatedRect, color, thickness=1, lineType=cv2.LINE_8, shift=0):
     (x, y), (width, height), angle = rotatedRect
@@ -131,7 +126,7 @@ def decode_predictions(scores, geometry1, geometry2):
         for x in range(0, numCols):
             # if our score does not have sufficient probability,
             # ignore it
-            if scoresData[x] < args["min_confidence"]:
+            if scoresData[x] < 0.5:
                 continue
 
             # compute the offset factor as our resulting feature
@@ -165,147 +160,127 @@ def decode_predictions(scores, geometry1, geometry2):
 	# return a tuple of the bounding boxes and associated confidences
     return (rects, confidences, angles)
 
-print("[INFO] Starting...")
-# construct the argument parser and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-east", "--east", type=str, default="east_text_detection_256x256_integer_quant.tflite", help="path to input EAST text detector")
-ap.add_argument("-v", "--video", type=str, default="test/test.mov", help="path to optinal input video file")
-ap.add_argument("-c", "--min-confidence", type=float, default=0.5, help="minimum probability required to inspect a region")
-ap.add_argument("-w", "--width", type=int, default=256,	help="resized image width (should be multiple of 32)")
-ap.add_argument("-e", "--height", type=int, default=256, help="resized image height (should be multiple of 32)")
-ap.add_argument("-cw", "--camera_width", type=int, default=640, help='USB Camera resolution (width). (Default=640)')
-ap.add_argument("-ch", "--camera_height", type=int, default=480, help='USB Camera resolution (height). (Default=480)')
-args = vars(ap.parse_args())
+def main():
+    fpsstr = ""
+    framecount = 0
+    time1 = 0
 
-# initialize the original frame dimensions, new frame dimensions,
-# and ratio between the dimensions
-(W, H) = (None, None)
-(newW, newH) = (args["width"], args["height"])
-(rW, rH) = (None, None)
+    print("[INFO] Starting...")
 
-mean = np.array([123.68, 116.779, 103.939][::-1], dtype="float32")
+    # initialize the original frame dimensions, new frame dimensions,
+    # and ratio between the dimensions
+    (W, H) = (None, None)
+    (newW, newH) = (256, 256)
+    (rW, rH) = (None, None)
 
-# define the two output layer names for the EAST detector model that
-# we are interested -- the first is the output probabilities and the
-# second can be used to derive the bounding box coordinates of text
+    mean = np.array([123.68, 116.779, 103.939][::-1], dtype="float32")
 
-# load the pre-trained EAST text detector
-print("[INFO] loading EAST text detector...")
-interpreter = Interpreter(model_path=args["east"], num_threads=4)
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+    # define the two output layer names for the EAST detector model that
+    # we are interested -- the first is the output probabilities and the
+    # second can be used to derive the bounding box coordinates of text
 
-# if a video path was not supplied, grab the reference to the web cam
-if not args.get("video", False):
-    print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
-    time.sleep(1.0)
+    # load the pre-trained EAST text detector
+    print("[INFO] loading EAST text detector...")
+    interpreter = Interpreter(model_path='resources/east_text_detection_256x256_integer_quant.tflite', num_threads=4)
+    interpreter.allocate_tensors()
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
 
-# otherwise, grab a reference to the video file
-else:
-    vs = cv2.VideoCapture(args["video"])
+    vs = cv2.VideoCapture('test/test.mov')
 
-# start the FPS throughput estimator
-fps = FPS().start()
+    # start the FPS throughput estimator
+    fps = FPS().start()
 
-# loop over frames from the video stream
-while True:
-    t1 = time.perf_counter()
+    # loop over frames from the video stream
+    while True:
+        t1 = time.perf_counter()
 
-    # grab the current frame, then handle if we are using a
-    # VideoStream or VideoCapture object
-    frame = vs.read()
-    frame = frame[1] if args.get("video", False) else frame
+        # grab the current frame, then handle if we are using a
+        # VideoStream or VideoCapture object
+        frame = vs.read()[1]
 
-    # check to see if we have reached the end of the stream
-    if frame is None:
-        break
+        # check to see if we have reached the end of the stream
+        if frame is None:
+            break
 
-    # resize the frame, maintaining the aspect ratio
-    frame = imutils.resize(frame, width=640)
-    orig = frame.copy()
+        # resize the frame, maintaining the aspect ratio
+        frame = imutils.resize(frame, width=640)
+        orig = frame.copy()
 
-    # if our frame dimensions are None, we still need to compute the
-    # ratio of old frame dimensions to new frame dimensions
-    if W is None or H is None:
-        (H, W) = frame.shape[:2]
-        rW = W / float(newW)
-        rH = H / float(newH)
+        # if our frame dimensions are None, we still need to compute the
+        # ratio of old frame dimensions to new frame dimensions
+        if W is None or H is None:
+            (H, W) = frame.shape[:2]
+            rW = W / float(newW)
+            rH = H / float(newH)
 
-    # resize the frame, this time ignoring aspect ratio
-    frame = cv2.resize(frame, (newW, newH))
+        # resize the frame, this time ignoring aspect ratio
+        frame = cv2.resize(frame, (newW, newH))
 
-    # construct a blob from the frame and then perform a forward pass
-    # of the model to obtain the two output layer sets
-    frame = frame.astype(np.float32)
-    frame -= mean
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame = np.expand_dims(frame, axis=0)
-    interpreter.set_tensor(input_details[0]['index'], frame)
-    interpreter.invoke()
+        # construct a blob from the frame and then perform a forward pass
+        # of the model to obtain the two output layer sets
+        frame = frame.astype(np.float32)
+        frame -= mean
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = np.expand_dims(frame, axis=0)
+        interpreter.set_tensor(input_details[0]['index'], frame)
+        interpreter.invoke()
 
-    scores = interpreter.get_tensor(output_details[0]['index'])
-    geometry1 = interpreter.get_tensor(output_details[1]['index'])
-    geometry2 = interpreter.get_tensor(output_details[2]['index'])
-    scores = np.transpose(scores, [0, 3, 1, 2])
-    geometry1 = np.transpose(geometry1, [0, 3, 1, 2])
-    geometry2 = np.transpose(geometry2, [0, 3, 1, 2])
+        scores = interpreter.get_tensor(output_details[0]['index'])
+        geometry1 = interpreter.get_tensor(output_details[1]['index'])
+        geometry2 = interpreter.get_tensor(output_details[2]['index'])
+        scores = np.transpose(scores, [0, 3, 1, 2])
+        geometry1 = np.transpose(geometry1, [0, 3, 1, 2])
+        geometry2 = np.transpose(geometry2, [0, 3, 1, 2])
 
-    # decode the predictions, then  apply non-maxima suppression to
-    # suppress weak, overlapping bounding boxes
-    (rects, confidences, angles) = decode_predictions(scores, geometry1, geometry2)
-    boxes, angles = non_max_suppression(np.array(rects), probs=confidences, angles=np.array(angles))
+        # decode the predictions, then  apply non-maxima suppression to
+        # suppress weak, overlapping bounding boxes
+        (rects, confidences, angles) = decode_predictions(scores, geometry1, geometry2)
+        boxes, angles = non_max_suppression(np.array(rects), probs=confidences, angles=np.array(angles))
 
-    # loop over the bounding boxes
-    for ((startX, startY, endX, endY), angle) in zip(boxes, angles):
-        # scale the bounding box coordinates based on the respective ratios
-        startX = int(startX * rW)
-        startY = int(startY * rH)
-        endX = int(endX * rW)
-        endY = int(endY * rH)
+        # loop over the bounding boxes
+        for ((startX, startY, endX, endY), angle) in zip(boxes, angles):
+            # scale the bounding box coordinates based on the respective ratios
+            startX = int(startX * rW)
+            startY = int(startY * rH)
+            endX = int(endX * rW)
+            endY = int(endY * rH)
 
-        # draw the bounding box on the frame
-        width   = abs(endX - startX)
-        height  = abs(endY - startY)
-        centerX = int(startX + width / 2)
-        centerY = int(startY + height / 2)
+            # draw the bounding box on the frame
+            width   = abs(endX - startX)
+            height  = abs(endY - startY)
+            centerX = int(startX + width / 2)
+            centerY = int(startY + height / 2)
 
-        rotatedRect = ((centerX, centerY), ((endX - startX), (endY - startY)), -angle)
-        points = rotated_Rectangle(orig, rotatedRect, color=(0, 255, 0), thickness=2)
-        cv2.polylines(orig, [points], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_8, shift=0)
-        cv2.putText(orig, fpsstr, (args["camera_width"]-170,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (38,0,255), 1, cv2.LINE_AA)
+            rotatedRect = ((centerX, centerY), ((endX - startX), (endY - startY)), -angle)
+            points = rotated_Rectangle(orig, rotatedRect, color=(0, 255, 0), thickness=2)
+            cv2.polylines(orig, [points], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_8, shift=0)
+            cv2.putText(orig, fpsstr, (640-170,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (38,0,255), 1, cv2.LINE_AA)
 
-    # update the FPS counter
-    fps.update()
+        # update the FPS counter
+        fps.update()
 
-    # show the output frame
-    cv2.imshow("Text Detection", orig)
-    if cv2.waitKey(1)&0xFF == ord('q'):
-        break
+        # show the output frame
+        cv2.imshow("Text Detection", orig)
+        if cv2.waitKey(1)&0xFF == ord('q'):
+            break
 
-    # FPS calculation
-    framecount += 1
-    if framecount >= 10:
-        fpsstr = "(Playback) {:.1f} FPS".format(time1/10)
-        framecount = 0
-        time1 = 0
-    t2 = time.perf_counter()
-    elapsedTime = t2-t1
-    time1 += 1/elapsedTime
+        # FPS calculation
+        framecount += 1
+        if framecount >= 10:
+            fpsstr = "(Playback) {:.1f} FPS".format(time1/10)
+            framecount = 0
+            time1 = 0
+        t2 = time.perf_counter()
+        elapsedTime = t2-t1
+        time1 += 1/elapsedTime
 
-# stop the timer and display FPS information
-fps.stop()
-print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
-print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+    # stop the timer and display FPS information
+    fps.stop()
+    print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
-# if we are using a webcam, release the pointer
-if not args.get("video", False):
-    vs.stop()
-
-# otherwise, release the file pointer
-else:
     vs.release()
 
-# close all windows
-cv2.destroyAllWindows()
+    # close all windows
+    cv2.destroyAllWindows()

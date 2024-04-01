@@ -1,10 +1,12 @@
 [tool.poetry]
-name = "east-text-detection-demo"
+name = "east_demo"
 version = "0.1.0"
 description = "This is a demo application demonstrates how EAST text detection model works in the real environment."
 authors = ["ddagaev222 <denisdagaev.dev@gmail.com>"]
+repository = "https://github.com/ddagaev222/east-text-detection-demo.git"
 license = "Apache License, Version 2.0"
 readme = "README.md"
+include = ["test/test.mov", "resources/east_text_detection_256x256_integer_quant.tflite"]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
@@ -13,8 +15,11 @@ numpy = "^1.24.3"
 opencv_python = "^4.9.0.80"
 tensorflow = "^2.16.1"
 tensorflow-io-gcs-filesystem = {version = "0.31.0", markers = 'sys_platform == "win32"'}
-tflite_runtime = {version = "^2.14.0", markers = 'sys_platform != "win32"'}
+tflite_runtime = {version = "^2.11.0", markers = 'sys_platform != "win32"'}
+
+[tool.poetry.scripts]
+east_demo = "east_demo:main"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

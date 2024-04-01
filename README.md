@@ -29,7 +29,13 @@ List any prerequisites or system requirements needed to set up the development e
 
 ## Setup
 
-Explain how to set up the development environment step by step.
+Install the project directly from git repository (add venv-path/Lib/site-packages to the PATH or go to venv-path/Lib/site-packages before run east_demo executable):
+
+```bash
+pip install git+https://github.com/ddagaev222/east-text-detection-demo.git
+.east_demo
+```
+
 
 ### 1. Clone the Repository
 
@@ -71,11 +77,7 @@ To run the project locally, use the following command:
 
 **Poetry**
 ```bash
-poetry run python demo.py
-```
-**Or just**
-```bash
-python demo.py
+poetry run east demo
 ```
 
 ## License

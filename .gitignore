@@ -1,2 +1,7 @@
 # Poetry
 poetry*
+dist/
+
+# Cache
+*.pyc
+__pycache__/
