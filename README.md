@@ -67,6 +67,11 @@ cd east-text-detection-demo
 pip install -r requirements_win.txt
 ```
 
+**For developers: this project uses pre-commit hooks, to install them mannualy run after installation completed**
+```bash
+pre-commit install
+```
+
 ### 3. Environment Setup
 
 Put a video file in the test/ directory and rename it 'test.mov'
@@ -77,7 +82,13 @@ To run the project locally, use the following command:
 
 **Poetry**
 ```bash
-poetry run east demo
+poetry run east_demo
+```
+
+**Or just**
+```bash
+cd ~/your-venv-path/Lib/site-packages
+east_demo
 ```
 
 ## License

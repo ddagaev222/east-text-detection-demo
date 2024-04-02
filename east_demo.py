@@ -1,47 +1,54 @@
-from imutils.video import VideoStream
-from imutils.video import FPS
-from imutils.object_detection import non_max_suppression
-import numpy as np
-import imutils
 import time
+
 import cv2
+import imutils
+import numpy as np
+from imutils.video import FPS
+
 try:
     from tflite_runtime.interpreter import Interpreter
-except:
+except ImportError:
     from tensorflow.lite.python.interpreter import Interpreter
 
-def rotated_Rectangle(img, rotatedRect, color, thickness=1, lineType=cv2.LINE_8, shift=0):
+
+def rotated_Rectangle(
+    img, rotatedRect, color, thickness=1, lineType=cv2.LINE_8, shift=0
+):
     (x, y), (width, height), angle = rotatedRect
- 
+
     pt1_1 = (int(x + width / 2), int(y + height / 2))
     pt2_1 = (int(x + width / 2), int(y - height / 2))
     pt3_1 = (int(x - width / 2), int(y - height / 2))
     pt4_1 = (int(x - width / 2), int(y + height / 2))
- 
-    t = np.array([[np.cos(angle),   -np.sin(angle), x-x*np.cos(angle)+y*np.sin(angle)],
-                    [np.sin(angle), np.cos(angle),  y-x*np.sin(angle)-y*np.cos(angle)],
-                    [0,             0,              1]])
- 
+
+    t = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), x - x * np.cos(angle) + y * np.sin(angle)],
+            [np.sin(angle), np.cos(angle), y - x * np.sin(angle) - y * np.cos(angle)],
+            [0, 0, 1],
+        ]
+    )
+
     tmp_pt1_1 = np.array([[pt1_1[0]], [pt1_1[1]], [1]])
     tmp_pt1_2 = np.dot(t, tmp_pt1_1)
     pt1_2 = (int(tmp_pt1_2[0][0]), int(tmp_pt1_2[1][0]))
- 
+
     tmp_pt2_1 = np.array([[pt2_1[0]], [pt2_1[1]], [1]])
     tmp_pt2_2 = np.dot(t, tmp_pt2_1)
     pt2_2 = (int(tmp_pt2_2[0][0]), int(tmp_pt2_2[1][0]))
- 
+
     tmp_pt3_1 = np.array([[pt3_1[0]], [pt3_1[1]], [1]])
     tmp_pt3_2 = np.dot(t, tmp_pt3_1)
     pt3_2 = (int(tmp_pt3_2[0][0]), int(tmp_pt3_2[1][0]))
- 
+
     tmp_pt4_1 = np.array([[pt4_1[0]], [pt4_1[1]], [1]])
     tmp_pt4_2 = np.dot(t, tmp_pt4_1)
     pt4_2 = (int(tmp_pt4_2[0][0]), int(tmp_pt4_2[1][0]))
- 
+
     points = np.array([pt1_2, pt2_2, pt3_2, pt4_2])
 
     return points
- 
+
 
 def non_max_suppression(boxes, probs=None, angles=None, overlapThresh=0.3):
     # if there are no boxes, return an empty list
@@ -81,7 +88,8 @@ def non_max_suppression(boxes, probs=None, angles=None, overlapThresh=0.3):
         i = idxs[last]
         pick.append(i)
 
-        # find the largest (x, y) coordinates for the start of the bounding box and the smallest (x, y) coordinates for the end of the bounding box
+        # find the largest (x, y) coordinates for the start of the bounding box and the smallest (x, y) coordinates
+        # for the end of the bounding box
         xx1 = np.maximum(x1[i], x1[idxs[:last]])
         yy1 = np.maximum(y1[i], y1[idxs[:last]])
         xx2 = np.minimum(x2[i], x2[idxs[:last]])
@@ -95,7 +103,9 @@ def non_max_suppression(boxes, probs=None, angles=None, overlapThresh=0.3):
         overlap = (w * h) / area[idxs[:last]]
 
         # delete all indexes from the index list that have overlap greater than the provided overlap threshold
-        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap > overlapThresh)[0])))
+        idxs = np.delete(
+            idxs, np.concatenate(([last], np.where(overlap > overlapThresh)[0]))
+        )
 
     # return only the bounding boxes that were picked
     return boxes[pick].astype("int"), angles[pick]
@@ -121,7 +131,7 @@ def decode_predictions(scores, geometry1, geometry2):
         xData2 = geometry1[0, 2, y]
         xData3 = geometry1[0, 3, y]
         anglesData = geometry2[0, 0, y]
-        
+
         # loop over the number of columns
         for x in range(0, numCols):
             # if our score does not have sufficient probability,
@@ -157,8 +167,9 @@ def decode_predictions(scores, geometry1, geometry2):
             confidences.append(scoresData[x])
             angles.append(angle)
 
-	# return a tuple of the bounding boxes and associated confidences
+    # return a tuple of the bounding boxes and associated confidences
     return (rects, confidences, angles)
+
 
 def main():
     fpsstr = ""
@@ -181,12 +192,15 @@ def main():
 
     # load the pre-trained EAST text detector
     print("[INFO] loading EAST text detector...")
-    interpreter = Interpreter(model_path='resources/east_text_detection_256x256_integer_quant.tflite', num_threads=4)
+    interpreter = Interpreter(
+        model_path="resources/east_text_detection_256x256_integer_quant.tflite",
+        num_threads=4,
+    )
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    vs = cv2.VideoCapture('test/test.mov')
+    vs = cv2.VideoCapture("test/test.mov")
 
     # start the FPS throughput estimator
     fps = FPS().start()
@@ -223,12 +237,12 @@ def main():
         frame -= mean
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = np.expand_dims(frame, axis=0)
-        interpreter.set_tensor(input_details[0]['index'], frame)
+        interpreter.set_tensor(input_details[0]["index"], frame)
         interpreter.invoke()
 
-        scores = interpreter.get_tensor(output_details[0]['index'])
-        geometry1 = interpreter.get_tensor(output_details[1]['index'])
-        geometry2 = interpreter.get_tensor(output_details[2]['index'])
+        scores = interpreter.get_tensor(output_details[0]["index"])
+        geometry1 = interpreter.get_tensor(output_details[1]["index"])
+        geometry2 = interpreter.get_tensor(output_details[2]["index"])
         scores = np.transpose(scores, [0, 3, 1, 2])
         geometry1 = np.transpose(geometry1, [0, 3, 1, 2])
         geometry2 = np.transpose(geometry2, [0, 3, 1, 2])
@@ -236,10 +250,12 @@ def main():
         # decode the predictions, then  apply non-maxima suppression to
         # suppress weak, overlapping bounding boxes
         (rects, confidences, angles) = decode_predictions(scores, geometry1, geometry2)
-        boxes, angles = non_max_suppression(np.array(rects), probs=confidences, angles=np.array(angles))
+        boxes, angles = non_max_suppression(
+            np.array(rects), probs=confidences, angles=np.array(angles)
+        )
 
         # loop over the bounding boxes
-        for ((startX, startY, endX, endY), angle) in zip(boxes, angles):
+        for (startX, startY, endX, endY), angle in zip(boxes, angles):
             # scale the bounding box coordinates based on the respective ratios
             startX = int(startX * rW)
             startY = int(startY * rH)
@@ -247,33 +263,56 @@ def main():
             endY = int(endY * rH)
 
             # draw the bounding box on the frame
-            width   = abs(endX - startX)
-            height  = abs(endY - startY)
+            width = abs(endX - startX)
+            height = abs(endY - startY)
             centerX = int(startX + width / 2)
             centerY = int(startY + height / 2)
 
-            rotatedRect = ((centerX, centerY), ((endX - startX), (endY - startY)), -angle)
-            points = rotated_Rectangle(orig, rotatedRect, color=(0, 255, 0), thickness=2)
-            cv2.polylines(orig, [points], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_8, shift=0)
-            cv2.putText(orig, fpsstr, (640-170,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (38,0,255), 1, cv2.LINE_AA)
+            rotatedRect = (
+                (centerX, centerY),
+                ((endX - startX), (endY - startY)),
+                -angle,
+            )
+            points = rotated_Rectangle(
+                orig, rotatedRect, color=(0, 255, 0), thickness=2
+            )
+            cv2.polylines(
+                orig,
+                [points],
+                isClosed=True,
+                color=(0, 255, 0),
+                thickness=2,
+                lineType=cv2.LINE_8,
+                shift=0,
+            )
+            cv2.putText(
+                orig,
+                fpsstr,
+                (640 - 170, 15),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (38, 0, 255),
+                1,
+                cv2.LINE_AA,
+            )
 
         # update the FPS counter
         fps.update()
 
         # show the output frame
         cv2.imshow("Text Detection", orig)
-        if cv2.waitKey(1)&0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
         # FPS calculation
         framecount += 1
         if framecount >= 10:
-            fpsstr = "(Playback) {:.1f} FPS".format(time1/10)
+            fpsstr = "(Playback) {:.1f} FPS".format(time1 / 10)
             framecount = 0
             time1 = 0
         t2 = time.perf_counter()
-        elapsedTime = t2-t1
-        time1 += 1/elapsedTime
+        elapsedTime = t2 - t1
+        time1 += 1 / elapsedTime
 
     # stop the timer and display FPS information
     fps.stop()
