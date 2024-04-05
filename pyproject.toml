@@ -6,7 +6,7 @@ authors = ["ddagaev222 <denisdagaev.dev@gmail.com>"]
 repository = "https://github.com/ddagaev222/east-text-detection-demo.git"
 license = "Apache License, Version 2.0"
 readme = "README.md"
-include = ["model/east_text_detection_256x256_integer_quant.tflite", "data/image1.jpg", "data/image2.png"]
+include = ["model/east_text_detection_256x256_integer_quant.tflite", "data/image1.png", "data/image2.png", "data/image3.png", "data/image4.png", "tests/test_text_bounding.py", "tests/__init__.py"]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
@@ -16,12 +16,14 @@ opencv_python = "^4.9.0.80"
 tensorflow = "^2.16.1"
 tensorflow-io-gcs-filesystem = {version = "0.31.0", markers = 'sys_platform == "win32"'}
 tflite_runtime = {version = "^2.11.0", markers = 'sys_platform != "win32"'}
+
+[tool.poetry.dev-dependencies]
 pre-commit = "^3.7.0"
 pytest = "^8.1.0"
 
 [tool.poetry.scripts]
 east_demo = "east_demo:main"
-east_test = "tests:test_text_bounding"
+#east_test = "tests.test_text_bounding:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -172,10 +172,10 @@ def decode_predictions(scores, geometry1, geometry2):
     return (rects, confidences, angles)
 
 
-def main():
+def process_video(vs: cv2.VideoCapture):
     fpsstr = ""
     framecount = 0
-    time1 = 0
+    time1 = 0.0
     site_path = [path for path in site.getsitepackages() if "site-packages" in path][0]
 
     print("[INFO] Starting...")
@@ -202,18 +202,6 @@ def main():
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-
-    filename = input("Enter path to the test video file (.mov):")
-    if filename.split(".")[-1] != "mov":
-        print("Invalid video filename", filename)
-        return -1
-
-    try:
-        vs = cv2.VideoCapture(filename)
-    except FileNotFoundError:
-        print("File not found")
-        return -1
-
     # start the FPS throughput estimator
     fps = FPS().start()
 
@@ -321,7 +309,7 @@ def main():
         if framecount >= 10:
             fpsstr = "(Playback) {:.1f} FPS".format(time1 / 10)
             framecount = 0
-            time1 = 0
+            time1 = 0.0
         t2 = time.perf_counter()
         elapsedTime = t2 - t1
         time1 += 1 / elapsedTime
@@ -331,7 +319,22 @@ def main():
     print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
     print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
-    vs.release()
-
     # close all windows
     cv2.destroyAllWindows()
+
+
+def main():
+    filename = input("Enter path to the test video file (.mov):")
+    if filename.split(".")[-1] != "mov":
+        print("Invalid video filename", filename)
+        return -1
+
+    try:
+        vs = cv2.VideoCapture(filename)
+    except FileNotFoundError:
+        print("File not found")
+        return -1
+
+    process_video(vs)
+
+    vs.release()
