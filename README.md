@@ -74,7 +74,15 @@ pre-commit install
 
 ### 3. Environment Setup
 
-Put a video file in the test/ directory and rename it 'test.mov'
+Install poetry
+```bash
+pip install poetry
+```
+
+Add venv-path/Lib/site-packages to the PATH
+```bash
+PATH = $PATH + "<path-to-venv-site-package-dir>"
+```
 
 ## Usage
 

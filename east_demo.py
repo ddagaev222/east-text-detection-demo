@@ -1,3 +1,4 @@
+import site
 import time
 
 import cv2
@@ -175,6 +176,7 @@ def main():
     fpsstr = ""
     framecount = 0
     time1 = 0
+    site_path = [path for path in site.getsitepackages() if "site-packages" in path][0]
 
     print("[INFO] Starting...")
 
@@ -193,14 +195,24 @@ def main():
     # load the pre-trained EAST text detector
     print("[INFO] loading EAST text detector...")
     interpreter = Interpreter(
-        model_path="resources/east_text_detection_256x256_integer_quant.tflite",
+        model_path=site_path
+        + "/model/east_text_detection_256x256_integer_quant.tflite",
         num_threads=4,
     )
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    vs = cv2.VideoCapture("test/test.mov")
+    filename = input("Enter path to the test video file (.mov):")
+    if filename.split(".")[-1] != "mov":
+        print("Invalid video filename", filename)
+        return -1
+
+    try:
+        vs = cv2.VideoCapture(filename)
+    except FileNotFoundError:
+        print("File not found")
+        return -1
 
     # start the FPS throughput estimator
     fps = FPS().start()

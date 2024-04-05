@@ -31,3 +31,10 @@ repos:
         files: \.py$
         additional_dependencies:
           - poetry
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - poetry
