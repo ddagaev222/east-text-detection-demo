@@ -5,6 +5,3 @@ dist/
 # Cache
 *.pyc
 __pycache__/
-
-# Hooks
-hooks/
