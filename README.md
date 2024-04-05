@@ -36,7 +36,7 @@ pip install git+https://github.com/ddagaev222/east-text-detection-demo.git
 .east_demo
 ```
 
-
+## For developers
 ### 1. Clone the Repository
 
 Clone the repository to your local machine:
@@ -49,22 +49,11 @@ git clone https://github.com/ddagaev222/east-text-detection-demo.git
 
 Navigate to the project directory and install the required dependencies using Poetry:
 
-**using Poetry**
 ```bash
 cd east-text-detection-demo
 poetry install
-```
-
-**using Pip (on Ubuntu or linux-based OS)**
-```bash
-cd east-text-detection-demo
-pip install -r requirements.txt
-```
-
-**using Pip (on Windows)**
-```bash
-cd east-text-detection-demo
-pip install -r requirements_win.txt
+poetry build
+pip install
 ```
 
 **For developers: this project uses pre-commit hooks, to install them mannualy run after installation completed**
@@ -78,12 +67,6 @@ Install poetry
 ```bash
 pip install poetry
 ```
-
-Add venv-path/Lib/site-packages to the PATH
-```bash
-PATH = $PATH + "<path-to-venv-site-package-dir>"
-```
-
 ## Usage
 
 To run the project locally, use the following command:
@@ -95,8 +78,16 @@ poetry run east_demo
 
 **Or just**
 ```bash
-cd ~/your-venv-path/Lib/site-packages
 east_demo
+```
+
+Input full path to your test video
+
+## Testing
+Run tests from project path with pytest command
+
+```bash
+pytest
 ```
 
 ## License

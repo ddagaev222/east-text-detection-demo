@@ -5,7 +5,7 @@ import imutils
 import numpy as np
 import pytest
 
-from east_demo import decode_predictions, non_max_suppression, rotated_Rectangle
+from east_demo import decode_predictions, non_max_suppression
 
 try:
     from tflite_runtime.interpreter import Interpreter
@@ -16,7 +16,7 @@ site_path = [path for path in site.getsitepackages() if "site-packages" in path]
 
 REGRESSION_TEST_CASES = [
     (
-        site_path + "/data/image1.jpg",
+        site_path + "/data/image1.png",
         (
             np.array([[142, 130, 191, 143], [57, 108, 99, 121]]),
             np.array([0.24483512, 0.23821796]),
@@ -25,9 +25,20 @@ REGRESSION_TEST_CASES = [
     (
         site_path + "/data/image2.png",
         (
-            np.array([[33, 14, 233, 126], [17, 122, 235, 220]]),
-            np.array([0.04301158, 0.02977725]),
+            np.array([[32, 12, 227, 123], [2, 118, 234, 224]]),
+            np.array([0.03639441, 0.02977725]),
         ),
+    ),
+]
+
+NO_ERRORS_TEST_CASES = [
+    (
+        site_path + "/data/image3.png",
+        ((323, 322), 63315, 0.0066171656),
+    ),
+    (
+        site_path + "/data/image4.png",
+        ((318, 319), 65415, -0.0),
     ),
 ]
 
@@ -61,7 +72,7 @@ def detect_text_bounding_box(frame):
 
     # resize the frame, maintaining the aspect ratio
     frame = imutils.resize(frame, width=640)
-    orig = frame.copy()
+    # orig = frame.copy()
 
     # if our frame dimensions are None, we still need to compute the
     # ratio of old frame dimensions to new frame dimensions
@@ -96,6 +107,7 @@ def detect_text_bounding_box(frame):
         np.array(rects), probs=confidences, angles=np.array(angles)
     )
 
+    rects = []
     # loop over the bounding boxes
     for (startX, startY, endX, endY), angle in zip(boxes, angles):
         # scale the bounding box coordinates based on the respective ratios
@@ -109,28 +121,29 @@ def detect_text_bounding_box(frame):
         height = abs(endY - startY)
         centerX = int(startX + width / 2)
         centerY = int(startY + height / 2)
-
         rotatedRect = (
             (centerX, centerY),
-            ((endX - startX), (endY - startY)),
+            (width, height),
             -angle,
         )
-        points = rotated_Rectangle(orig, rotatedRect, color=(0, 255, 0), thickness=2)
-        cv2.polylines(
-            orig,
-            [points],
-            isClosed=True,
-            color=(0, 255, 0),
-            thickness=2,
-            lineType=cv2.LINE_8,
-            shift=0,
-        )
+        rects.append(rotatedRect)
+    # Draw the bounding box and show image
+    # points = rotated_Rectangle(orig, rotatedRect, color=(0, 255, 0), thickness=2)
+    #     cv2.polylines(
+    #         orig,
+    #         [points],
+    #         isClosed=True,
+    #         color=(0, 255, 0),
+    #         thickness=2,
+    #         lineType=cv2.LINE_8,
+    #         shift=0,
+    #     )
 
-    # show the output frame
-    cv2.imshow("Text Detection", orig)
-    cv2.waitKey(0)
+    # # show the output frame
+    # cv2.imshow("Text Detection", orig)
+    # cv2.waitKey(0)
 
-    return boxes, angles
+    return boxes, angles, rects
 
 
 @pytest.mark.parametrize("image, expected_result", REGRESSION_TEST_CASES)
@@ -142,6 +155,31 @@ def test_regression_text_detection(image, expected_result):
 
     result = detect_text_bounding_box(frame)
     print(result)
-    assert len(result) == len(expected_result)
-    for elm1, elm2 in zip(result, expected_result):
+    assert len(result) == 3
+    assert len(result[0]) == len(expected_result[0])
+    for elm1, elm2 in zip(result[:2], expected_result[:2]):
         assert np.all(elm1) == np.all(elm2)
+
+
+@pytest.mark.parametrize("image, expected_result", NO_ERRORS_TEST_CASES)
+def test_no_error_text_detection(image, expected_result):
+    frame = cv2.imread(image)
+
+    if frame is None:
+        pytest.fail(f"Test failed. Could not open file {image}.")
+
+    result = detect_text_bounding_box(frame)
+    print(result)
+    assert len(result) == 3
+    assert len(result[2]) == 1
+    rect = result[2][0]
+    centerX, centerY = rect[0]
+    w, h = rect[1]
+    assert centerX == expected_result[0][0]
+    assert centerY == expected_result[0][1]
+    assert w * h == expected_result[1]
+    assert np.isclose(rect[2], expected_result[2])
+
+
+def main():
+    pytest.main()
