@@ -32,8 +32,9 @@ jobs:
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install
+        run: |
+          poetry lock
+          poetry install
 
       - name: Build package
         run: poetry build
@@ -47,3 +48,13 @@ jobs:
         run: |
           source .venv/bin/activate
           pytest tests/
+
+      - name: Install Docker (if not installed)
+        run: docker --version ||
+             sudo apt-get update
+             sudo apt-get install -y docker.io
+
+      - name: Build Docker image
+        run: |
+          source .venv/bin/activate
+          docker build -t east_web_app:latest .

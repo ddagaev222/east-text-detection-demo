@@ -27,6 +27,11 @@ List any prerequisites or system requirements needed to set up the development e
 - Python version: >=3.9, <4.0
 - Required poetry or pip
 
+```bash
+python -m pip install --upgrade pip
+pip install poetry
+```
+
 ## Setup
 
 Install the project directly from git repository (add venv-path/Lib/site-packages to the PATH or go to venv-path/Lib/site-packages before run east_demo executable):
@@ -89,6 +94,23 @@ Run tests from project path with pytest command
 ```bash
 pytest
 ```
+
+## Streamlit demo app
+```bash
+streamlit run web_app.py
+```
+
+## Docker container
+Build docker container
+```bash
+docker build -t east_web_app .
+```
+
+Run the image on your environment
+```bash
+docker run -p 8501:8501 east_web_app
+```
+
 
 ## License
 
